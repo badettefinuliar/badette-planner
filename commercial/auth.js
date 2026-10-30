@@ -2,16 +2,20 @@ import { firebaseConfig, PRODUCT_ID } from './firebase-config.js';
 import { initializePlanner } from './planner.js';
 
 const $ = id => document.getElementById(id);
-let auth, signOutUser, watchAccess;
+let auth, signOutUser, watchAccess, ensureBuyer;
+let submitting = false;
 let stopAccess = () => {};
 let generation = 0;
 
-function screen(title, message, { login = false, retry = false } = {}) {
+function screen(title, message, { login = false, signup = false, retry = false } = {}) {
   $('planner').hidden = true;
   $('accessGate').hidden = false;
   $('accessTitle').textContent = title;
   $('accessMessage').textContent = message;
   $('loginForm').hidden = !login;
+  $('signupNav').hidden = !login;
+  $('signupForm').hidden = !signup;
+  $('loginNav').hidden = !signup;
   $('retryAccess').hidden = !retry;
 }
 function resetAccess() {
@@ -19,16 +23,24 @@ function resetAccess() {
   stopAccess();
   stopAccess = () => {};
 }
-function checkBuyer(user) {
+async function checkBuyer(user) {
   resetAccess();
   const current = generation;
   $('logout').hidden = !user;
   if (!user) {
-    screen('Welcome back', 'Log in with the email and password provided for your purchase.', { login: true });
+    screen('Welcome back', 'Log in with your email and password, or create an account to request access.', { login: true });
     return;
   }
   screen('Checking your access…', 'Confirming your buyer approval.');
-  // Only access metadata is read; no planner data is sent to Firebase.
+  // Create only a missing pending record. Transactions never replace existing access.
+  try {
+    await ensureBuyer(user);
+  } catch {
+    if (current === generation) screen('Unable to prepare your account', 'Your login account is ready, but we could not confirm your buyer record. Check your connection and try again. If you just signed up, do not create another account: log in and retry.', { retry: true });
+    return;
+  }
+  if (current !== generation) return;
+  // Only buyer access metadata is synchronized; planner data stays on this device.
   stopAccess = watchAccess(user.uid, snapshot => {
     if (current !== generation) return;
     if (snapshot.metadata.fromCache) {
@@ -37,7 +49,7 @@ function checkBuyer(user) {
     }
     const buyer = snapshot.exists() ? snapshot.data() : null;
     if (buyer?.status !== 'approved' || !Array.isArray(buyer.allowedProducts) || !buyer.allowedProducts.includes(PRODUCT_ID)) {
-      screen('Access Pending Approval', 'Your account is signed in, but access to My Everyday Planner has not been approved yet. Please contact the seller with your purchase email.', { retry: true });
+      screen('Access Pending Approval', buyer?.status === 'pending' ? 'Your account is ready. Access is pending approval.' : 'Your account is signed in, but access to My Everyday Planner is not currently approved. Please contact the seller with your purchase email.', { retry: true });
       return;
     }
     try {
@@ -53,9 +65,30 @@ function checkBuyer(user) {
   });
 }
 
+function clearPasswords() {
+  ['loginPassword', 'signupPassword', 'signupConfirm'].forEach(id => { $(id).value = ''; });
+  $('signupConfirm').setCustomValidity('');
+}
+function setSubmitting(value) {
+  submitting = value;
+  ['loginSubmit', 'signupSubmit', 'showSignup', 'showLogin'].forEach(id => { $(id).disabled = value; });
+}
+$('showSignup').onclick = () => {
+  clearPasswords();
+  screen('Create your account', 'Sign up to request access to My Everyday Planner.', { signup: true });
+  $('signupEmail').focus();
+};
+$('showLogin').onclick = () => {
+  clearPasswords();
+  screen('Welcome back', 'Log in with your email and password.', { login: true });
+  $('loginEmail').focus();
+};
+$('signupConfirm').oninput = event => event.target.setCustomValidity('');
+$('signupPassword').oninput = () => $('signupConfirm').setCustomValidity('');
 $('retryAccess').onclick = () => checkBuyer(auth?.currentUser);
 $('logout').onclick = async () => {
   resetAccess();
+  clearPasswords();
   screen('Logging out…', 'Closing your planner.');
   $('logout').disabled = true;
   try {
@@ -85,12 +118,22 @@ async function boot() {
     await authSDK.setPersistence(auth, authSDK.browserSessionPersistence);
     signOutUser = authSDK.signOut;
     const store = storeSDK.getFirestore(app);
+    ensureBuyer = user => storeSDK.runTransaction(store, async transaction => {
+      const ref = storeSDK.doc(store, 'buyers', user.uid);
+      const existing = await transaction.get(ref);
+      if (!existing.exists()) {
+        // Auth supplies the canonical email; passwords never enter this document.
+        if (!user.email) throw new Error('An email account is required');
+        transaction.set(ref, { email: user.email, status: 'pending', allowedProducts: [] });
+      }
+    });
     watchAccess = (uid, next, error) => storeSDK.onSnapshot(
       storeSDK.doc(store, 'buyers', uid), { includeMetadataChanges: true }, next, error
     );
     $('loginForm').onsubmit = async event => {
       event.preventDefault();
-      $('loginSubmit').disabled = true;
+      if (submitting) return;
+      setSubmitting(true);
       $('accessMessage').textContent = 'Logging in…';
       try {
         await authSDK.signInWithEmailAndPassword(auth, $('loginEmail').value.trim(), $('loginPassword').value);
@@ -102,8 +145,41 @@ async function boot() {
             : 'Login failed. Check your email and password, or contact the seller.';
         screen('Welcome back', message, { login: true });
       } finally {
-        $('loginPassword').value = '';
-        $('loginSubmit').disabled = false;
+        clearPasswords();
+        setSubmitting(false);
+      }
+    };
+    $('signupForm').onsubmit = async event => {
+      event.preventDefault();
+      if (submitting) return;
+      const password = $('signupPassword').value;
+      if (password.length < 8) {
+        $('accessMessage').textContent = 'Choose a password with at least 8 characters.';
+        return;
+      }
+      if (password !== $('signupConfirm').value) {
+        $('signupConfirm').setCustomValidity('The passwords do not match.');
+        $('signupConfirm').reportValidity();
+        $('accessMessage').textContent = 'The passwords do not match. Please try again.';
+        return;
+      }
+      setSubmitting(true);
+      $('accessMessage').textContent = 'Creating your account…';
+      try {
+        // The auth listener prepares the pending record, including after a reload.
+        await authSDK.createUserWithEmailAndPassword(auth, $('signupEmail').value.trim(), password);
+      } catch (error) {
+        const message = error.code === 'auth/email-already-in-use'
+          ? 'An account already uses this email. Log in to continue. Any existing buyer access will be kept.'
+          : error.code === 'auth/weak-password' || error.code === 'auth/password-does-not-meet-requirements'
+            ? 'Please choose a stronger password that meets the account password policy.'
+            : error.code === 'auth/too-many-requests'
+              ? 'Too many attempts. Please wait before trying again.'
+              : 'Could not create your account. Check your email and connection, then try again.';
+        screen('Create your account', message, { signup: true });
+      } finally {
+        clearPasswords();
+        setSubmitting(false);
       }
     };
     authSDK.onAuthStateChanged(auth, checkBuyer, () => {

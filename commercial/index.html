@@ -82,6 +82,15 @@ h1{font-size:2rem}.box{box-shadow:0 5px 22px #59445608;border-radius:20px;paddin
     <div class="w"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
     <button class="pri w" id="loginSubmit">Log in</button>
   </form>
+  <p id="signupNav" hidden>New here? <button type="button" class="sm" id="showSignup">Create account</button></p>
+  <form id="signupForm" hidden>
+    <div class="w"><label for="signupEmail">Email address</label><input id="signupEmail" type="email" autocomplete="username" required maxlength="254"></div>
+    <div class="w"><label for="signupPassword">Password (at least 8 characters)</label><input id="signupPassword" type="password" autocomplete="new-password" minlength="8" required aria-describedby="signupHelp"></div>
+    <div class="w"><label for="signupConfirm">Confirm password</label><input id="signupConfirm" type="password" autocomplete="new-password" minlength="8" required></div>
+    <p class="meta w" id="signupHelp">Creating an account requests access. The seller must approve your account before you can open the planner.</p>
+    <button class="pri w" id="signupSubmit">Create account</button>
+  </form>
+  <p id="loginNav" hidden>Already have an account? <button type="button" class="sm" id="showLogin">Log in</button></p>
   <button type="button" id="retryAccess" class="pri" hidden>Check access again</button>
   <p class="meta">Your bills, errands, savings goals, and personalization stay in this browser. Your account is used only to verify buyer access.</p>
   <p class="meta">Use your own device and browser profile. Logging out keeps local planner data on this device.</p>

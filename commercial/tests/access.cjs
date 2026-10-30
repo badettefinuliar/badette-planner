@@ -16,6 +16,10 @@ export const signOut=async auth=>{auth.currentUser=null;callback(null)};
 `;
 const store = `
 export const getFirestore=()=>({});
+export const runTransaction=async(store,fn)=>fn({
+ get:async()=>({exists:()=>!!window.testBuyer,data:()=>window.testBuyer}),
+ set:(ref,value)=>{window.testBuyer=value}
+});
 export const doc=(store,collection,uid)=>{if(collection!=='buyers'||uid!=='buyer-123')throw Error('Unexpected read');return {uid}};
 export const onSnapshot=(ref,options,next,error)=>{
  window.accessNext=(data,fromCache=false)=>next({metadata:{fromCache},exists:()=>data!==null,data:()=>data});
