@@ -8,6 +8,7 @@ const readyMethod = key => {
 };
 let auth, authSDK, sdk, db, signup = false, working = false, accountReady = false;
 let version = 0, stopOrders = () => {}, submitting = false, draftOrder;
+let orderStateKnown = false, paymentBlocked = false;
 function element(tag, value) { const e = document.createElement(tag); e.textContent = value; return e; }
 function showAccessCelebration(user, record) {
   const dialog = $('accessCelebration');
@@ -31,11 +32,13 @@ function paymentInfo() {
       if (line) $('paymentInstructions').append(element('p', line));
     }
   }
-  $('submitOrder').disabled = !accountReady || !readyMethod($('paymentMethod').value) || submitting;
+  $('submitOrder').disabled = !accountReady || !orderStateKnown || paymentBlocked || !readyMethod($('paymentMethod').value) || submitting;
 }
 function clearSession() {
   version++;
   accountReady = false;
+  orderStateKnown = false;
+  paymentBlocked = false;
   stopOrders(); stopOrders = () => {};
   $('paymentPanel').hidden = true;
   $('myOrders').hidden = true;
@@ -67,14 +70,42 @@ $('paymentMethod').onchange = paymentInfo;
 function watchOrders(user, current) {
   stopOrders();
   $('myOrders').hidden = false;
+  $('paymentPanel').hidden = true;
+  orderStateKnown = false;
+  paymentBlocked = false;
+  paymentInfo();
   const query = sdk.query(sdk.collection(db, 'orders'), sdk.where('buyerUid', '==', user.uid));
   $('ordersMessage').textContent = 'Loading your orders…';
   stopOrders = sdk.onSnapshot(query, { includeMetadataChanges: true }, snapshot => {
     if (current !== version) return;
     $('orderList').replaceChildren();
-    if (snapshot.metadata.fromCache) { $('ordersMessage').textContent = 'Connect to see current order status.'; return; }
+    if (snapshot.metadata.fromCache) {
+      orderStateKnown = false;
+      paymentBlocked = true;
+      $('paymentPanel').hidden = true;
+      paymentInfo();
+      $('ordersMessage').textContent = 'Connect to see current order status.';
+      return;
+    }
     const records = snapshot.docs.slice().sort((a,b) => (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0));
-    $('ordersMessage').textContent = records.length ? 'Payment receipt is verified manually. Verified payment and active access are separate steps.' : 'No orders yet.';
+    const hasGranted = records.some(record => record.data().productId === PRODUCT_ID && record.data().status === 'access_granted');
+    const hasInProgress = records.some(record => record.data().productId === PRODUCT_ID && ['payment_pending', 'payment_verified'].includes(record.data().status));
+    orderStateKnown = true;
+    paymentBlocked = hasGranted || hasInProgress;
+    if (hasGranted) {
+      $('paymentPanel').hidden = true;
+      $('accountMessage').textContent = `Signed in as ${user.email}. Your My Everyday Planner access is active.`;
+      $('ordersMessage').textContent = 'Access active. Open your planner below.';
+    } else if (hasInProgress) {
+      $('paymentPanel').hidden = true;
+      $('accountMessage').textContent = `Signed in as ${user.email}. Your payment is already being processed.`;
+      $('ordersMessage').textContent = 'You already have a payment in progress. Please wait for verification and access activation before submitting anything else.';
+    } else {
+      $('paymentPanel').hidden = false;
+      $('accountMessage').textContent = `Signed in as ${user.email}. Choose your payment method below.`;
+      $('ordersMessage').textContent = records.length ? 'Previous orders are shown below. You may submit a new payment if needed.' : 'No orders yet.';
+    }
+    paymentInfo();
     const statuses = { payment_pending: 'Payment pending verification', payment_verified: 'Payment verified · awaiting access activation', rejected: 'Payment rejected · contact the seller', access_granted: 'Access activated' };
     let celebrationChecked = false;
     for (const record of records) {
@@ -92,7 +123,16 @@ function watchOrders(user, current) {
       }
       $('orderList').append(card);
     }
-  }, () => { if (current === version) { $('orderList').replaceChildren(); $('ordersMessage').textContent = 'Could not load orders. Check your connection and refresh.'; } });
+  }, () => {
+    if (current === version) {
+      orderStateKnown = false;
+      paymentBlocked = true;
+      $('paymentPanel').hidden = true;
+      paymentInfo();
+      $('orderList').replaceChildren();
+      $('ordersMessage').textContent = 'Could not load orders. Check your connection and refresh before submitting a payment.';
+    }
+  });
 }
 function accountChanged(user) {
   clearSession();
@@ -102,9 +142,9 @@ function accountChanged(user) {
   $('retryAccount').hidden = true;
   if (!user) { $('accountMessage').textContent = 'Log in or create an account to submit your payment.'; return; }
   accountReady = true;
-  $('accountMessage').textContent = `Signed in as ${user.email}. Choose your payment method below.`;
+  $('accountMessage').textContent = `Signed in as ${user.email}. Checking your order status…`;
   $('buyerEmail').value = user.email;
-  $('paymentPanel').hidden = false;
+  $('paymentPanel').hidden = true;
   paymentInfo();
   watchOrders(user, current);
 }
@@ -113,13 +153,25 @@ $('refreshOrders').onclick = () => { if (auth?.currentUser && accountReady) watc
 $('orderForm').onsubmit = async event => {
   event.preventDefault();
   const user = auth?.currentUser;
-  if (!user || !accountReady || submitting || !readyMethod($('paymentMethod').value)) return;
+  if (!user || !accountReady || !orderStateKnown || paymentBlocked || submitting || !readyMethod($('paymentMethod').value)) {
+    if (paymentBlocked) $('orderMessage').textContent = 'A payment is already in progress or your planner access is already active.';
+    return;
+  }
   const buyerName = $('buyerName').value.trim(), paymentReference = $('paymentReference').value.trim();
   if (buyerName.length < 2 || paymentReference.length < 3) { $('orderMessage').textContent = 'Enter your full name and payment transaction reference.'; return; }
   const current = version;
   submitting = true; paymentInfo();
   $('orderMessage').textContent = 'Submitting payment for manual verification…';
   try {
+    const latestOrders = await sdk.getDocs(sdk.query(sdk.collection(db, 'orders'), sdk.where('buyerUid', '==', user.uid)));
+    const duplicateBlock = latestOrders.docs.some(record => record.data().productId === PRODUCT_ID && ['payment_pending', 'payment_verified', 'access_granted'].includes(record.data().status));
+    if (duplicateBlock) {
+      paymentBlocked = true;
+      $('paymentPanel').hidden = true;
+      $('orderMessage').textContent = 'You already have a payment in progress or active planner access. No new payment was submitted.';
+      watchOrders(user, current);
+      return;
+    }
     const order = { buyerUid: user.uid, buyerEmail: user.email, buyerName, productId: PRODUCT_ID, amount: 149, paymentMethod: $('paymentMethod').value, paymentReference, note: $('note').value.trim(), status: 'payment_pending', createdAt: sdk.serverTimestamp() };
     draftOrder ||= { ref: sdk.doc(sdk.collection(db, 'orders')), data: order };
     try {
