@@ -67,7 +67,7 @@ async function applyVerificationState(user) {
     return;
   }
   lockPayment();
-  if ($('verificationText')) $('verificationText').textContent = `We sent access to ${user.email}. Verify this address before submitting payment.`;
+  if ($('verificationText')) $('verificationText').textContent = `Verify ${user.email} before submitting payment.`;
   if ($('accountMessage')) $('accountMessage').textContent = `Signed in as ${user.email}. Verify your email before submitting payment.`;
 }
 
