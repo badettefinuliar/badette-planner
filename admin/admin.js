@@ -1,4 +1,5 @@
 // Reuse the commercial app's existing Firebase project, never an admin credential.
+import { createOrdersPanel } from './orders.js';
 import { firebaseConfig, PRODUCT_ID } from '../commercial/firebase-config.js';
 
 const $ = id => document.getElementById(id);
@@ -7,6 +8,24 @@ let stopAdmin = () => {}, stopBuyers = () => {};
 let session = 0, listVersion = 0, verifiedAdmin = false;
 let selectedStatus = 'pending';
 const busy = new Set();
+let activeSection = 'buyers';
+const ordersPanel = createOrdersPanel({
+  context: () => ({ auth, sdk: storeSDK, db: store, authorized: verifiedAdmin, session }),
+  failure: () => { reset(); screen('Orders unavailable', 'Check your connection and admin permission, then retry.', { retry: true }); },
+});
+function showSection() {
+  $('buyerPanel').hidden = activeSection !== 'buyers';
+  $('ordersPanel').hidden = activeSection !== 'orders';
+  clearBuyers(); ordersPanel.stop();
+  if (activeSection === 'orders') ordersPanel.start(); else loadBuyers();
+}
+$('workspaceTabs').onclick = event => {
+  const button = event.target.closest('button[data-section]');
+  if (!button || !verifiedAdmin) return;
+  activeSection = button.dataset.section;
+  $('workspaceTabs').querySelectorAll('button').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  showSection();
+};
 
 function clearBuyers() {
   listVersion++;
@@ -19,6 +38,7 @@ function clearBuyers() {
 }
 function screen(title, message, { login = false, retry = false } = {}) {
   verifiedAdmin = false;
+  ordersPanel.stop();
   clearBuyers();
   $('dashboard').hidden = true;
   $('gate').hidden = false;
@@ -51,7 +71,7 @@ function checkAdmin(user) {
       verifiedAdmin = true;
       $('gate').hidden = true;
       $('dashboard').hidden = false;
-      loadBuyers();
+      showSection();
     }
   }, () => {
     if (current === session) screen('Unable to verify admin access', 'Check your connection or contact the owner. Buyer records remain hidden.', { retry: true });
