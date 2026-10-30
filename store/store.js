@@ -143,9 +143,22 @@ async function boot() {
       if (signup && ($('password').value.length < 8 || $('password').value !== $('confirmPassword').value)) { $('accountMessage').textContent = 'Use at least 8 characters and matching passwords.'; return; }
       working = true;
       for (const id of ['authSubmit','loginMode','signupMode']) $(id).disabled = true;
-      try { await authSDK[signup ? 'createUserWithEmailAndPassword' : 'signInWithEmailAndPassword'](auth, $('email').value.trim(), $('password').value); }
-      catch (error) { $('accountMessage').textContent = error.code === 'auth/email-already-in-use' ? 'This email already has an account. Choose Log in to continue.' : 'Could not sign in or create your account. Check your details, password policy, and connection.'; }
-      finally { $('password').value = ''; $('confirmPassword').value = ''; working = false; for (const id of ['authSubmit','loginMode','signupMode']) $(id).disabled = false; }
+      try {
+        await authSDK[signup ? 'createUserWithEmailAndPassword' : 'signInWithEmailAndPassword'](auth, $('email').value.trim(), $('password').value);
+      } catch (error) {
+        if (error.code === 'auth/email-already-in-use') {
+          const existingEmail = $('email').value.trim();
+          mode(false);
+          $('email').value = existingEmail;
+          $('accountMessage').textContent = 'Account already exists for this email. Please log in instead.';
+          $('password').focus();
+        } else {
+          $('accountMessage').textContent = 'Could not sign in or create your account. Check your details, password policy, and connection.';
+        }
+      } finally {
+        $('password').value = ''; $('confirmPassword').value = ''; working = false;
+        for (const id of ['authSubmit','loginMode','signupMode']) $(id).disabled = false;
+      }
     };
     authSDK.onAuthStateChanged(auth, accountChanged, () => { clearSession(); $('accountMessage').textContent = 'Login unavailable. Reload to try again.'; });
     window.addEventListener('offline', () => { clearSession(); $('authPanel').hidden = true; $('accountMessage').textContent = 'Connect to submit payments and see current order status.'; });
