@@ -9,6 +9,17 @@ const readyMethod = key => {
 let auth, authSDK, sdk, db, signup = false, working = false, accountReady = false;
 let version = 0, stopOrders = () => {}, submitting = false, draftOrder;
 function element(tag, value) { const e = document.createElement(tag); e.textContent = value; return e; }
+function showAccessCelebration(user, record) {
+  const dialog = $('accessCelebration');
+  if (!dialog || typeof dialog.showModal !== 'function') return;
+  const key = `planner-access-celebrated:${user.uid}:${record.id}`;
+  try {
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+  } catch {}
+  if (!dialog.open) dialog.showModal();
+}
+$('closeCelebration').onclick = () => { if ($('accessCelebration').open) $('accessCelebration').close(); };
 function paymentInfo() {
   for (const option of $('paymentMethod').options) option.textContent = `${methodLabel(option.value)}${readyMethod(option.value) ? '' : ' — Not yet configured'}`;
   const method = paymentMethods[$('paymentMethod').value];
@@ -65,11 +76,20 @@ function watchOrders(user, current) {
     const records = snapshot.docs.slice().sort((a,b) => (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0));
     $('ordersMessage').textContent = records.length ? 'Payment receipt is verified manually. Verified payment and active access are separate steps.' : 'No orders yet.';
     const statuses = { payment_pending: 'Payment pending verification', payment_verified: 'Payment verified · awaiting access activation', rejected: 'Payment rejected · contact the seller', access_granted: 'Access activated' };
+    let celebrationChecked = false;
     for (const record of records) {
       const order = record.data(), card = element('article', ''); card.className = 'order';
       card.append(element('h3', `My Everyday Planner · ₱${order.amount}`), element('p', `Order: ${record.id}`), element('p', statuses[order.status] || order.status), element('p', `Reference: ${order.paymentReference}`));
       if (order.createdAt?.toDate) card.append(element('p', `Submitted: ${order.createdAt.toDate().toLocaleString()}`));
-      if (order.status === 'access_granted') { const link = element('a', 'Open My Everyday Planner'); link.href = '../commercial/'; card.append(link); }
+      if (order.status === 'access_granted') {
+        const link = element('a', 'Open My Everyday Planner');
+        link.href = '../commercial/';
+        card.append(link);
+        if (!celebrationChecked) {
+          celebrationChecked = true;
+          showAccessCelebration(user, record);
+        }
+      }
       $('orderList').append(card);
     }
   }, () => { if (current === version) { $('orderList').replaceChildren(); $('ordersMessage').textContent = 'Could not load orders. Check your connection and refresh.'; } });
