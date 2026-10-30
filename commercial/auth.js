@@ -6,6 +6,34 @@ let auth, signOutUser, watchAccess, ensureBuyer;
 let submitting = false;
 let stopAccess = () => {};
 let generation = 0;
+let plannerUserUid = null;
+
+// The planner intentionally keeps personal data only on this device. Scope the
+// commercial planner's localStorage key to the signed-in Firebase UID so two
+// approved buyers using the same browser never see each other's local data.
+const PLANNER_STORAGE_KEY = 'commercial-planner-v1';
+let scopedStorageInstalled = false;
+let scopedStorageUid = null;
+function installScopedPlannerStorage(uid) {
+  scopedStorageUid = uid;
+  if (scopedStorageInstalled) return;
+  scopedStorageInstalled = true;
+  const nativeGetItem = Storage.prototype.getItem;
+  const nativeSetItem = Storage.prototype.setItem;
+  const nativeRemoveItem = Storage.prototype.removeItem;
+  const scopedKey = (storage, key) => storage === localStorage && key === PLANNER_STORAGE_KEY && scopedStorageUid
+    ? `${PLANNER_STORAGE_KEY}:${scopedStorageUid}`
+    : key;
+  Storage.prototype.getItem = function(key) {
+    return nativeGetItem.call(this, scopedKey(this, key));
+  };
+  Storage.prototype.setItem = function(key, value) {
+    return nativeSetItem.call(this, scopedKey(this, key), value);
+  };
+  Storage.prototype.removeItem = function(key) {
+    return nativeRemoveItem.call(this, scopedKey(this, key));
+  };
+}
 
 function screen(title, message, { login = false, signup = false, retry = false } = {}) {
   $('planner').hidden = true;
@@ -53,6 +81,15 @@ async function checkBuyer(user) {
       return;
     }
     try {
+      // planner.js initializes once per page load, so account switches force a
+      // reload. This prevents the previous buyer's in-memory planner data from
+      // remaining visible after another account signs in on the same browser.
+      if (plannerUserUid && plannerUserUid !== user.uid) {
+        location.reload();
+        return;
+      }
+      installScopedPlannerStorage(user.uid);
+      plannerUserUid = user.uid;
       initializePlanner();
       $('accessGate').hidden = true;
       $('planner').hidden = false;
@@ -93,7 +130,9 @@ $('logout').onclick = async () => {
   $('logout').disabled = true;
   try {
     await signOutUser(auth);
-    checkBuyer(null);
+    // Start the next login with a clean JS memory state. Per-user planner data
+    // remains stored locally under that user's UID-scoped key.
+    location.reload();
   } catch {
     screen('Logout could not complete', 'Please try Logout again. The planner remains locked.');
   } finally {
