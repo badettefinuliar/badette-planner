@@ -1,12 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Buyers may fetch/watch only their own access record by Firebase Auth UID.
-    match /buyers/{uid} {
-      allow get: if request.auth != null && request.auth.uid == uid;
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    match /admins/{uid} {
+      // Membership is managed only through the console or a trusted Admin SDK.
+      allow get: if signedIn() && request.auth.uid == uid;
       allow list, create, update, delete: if false;
     }
-    // No financial/planner documents or other client-readable collections.
+    match /buyers/{uid} {
+      allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow list: if isAdmin();
+      // Only access metadata may change; no passwords or financial fields.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'allowedProducts'])
+        && request.resource.data.keys().hasOnly(['email', 'status', 'allowedProducts'])
+        && request.resource.data.email is string
+        && request.resource.data.status in ['pending', 'approved', 'revoked']
+        && request.resource.data.allowedProducts is list
+        && request.resource.data.allowedProducts.size() <= 50;
+      allow create, delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
