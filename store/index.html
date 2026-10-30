@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light"><meta name="theme-color" content="#fff9f0">
-<title>My Everyday Planner · BizPilot Digital</title><link rel="stylesheet" href="./styles.css">
+<title>My Everyday Planner · BizPilot Digital</title><link rel="stylesheet" href="./styles.css?v=20261030c">
 </head>
 <body>
 <header><a class="brand" href="./">BizPilot <span>Digital</span></a><nav aria-label="Store navigation"><a href="../commercial/">My Everyday Planner</a><button id="logout" class="secondary" hidden>Logout</button></nav></header>
@@ -30,5 +30,16 @@
 </section>
 <section id="myOrders" class="card" hidden aria-labelledby="ordersTitle"><h2 id="ordersTitle">Your orders</h2><p id="ordersMessage" role="status" aria-live="polite"></p><div id="orderList"></div><button id="refreshOrders" class="secondary">Refresh orders</button></section>
 <noscript><p class="card">Enable JavaScript to create an account and submit an order.</p></noscript>
-</main><footer>Built by BizPilot Digital</footer><script type="module" src="./store.js"></script>
+</main>
+<dialog id="accessCelebration" aria-labelledby="celebrationTitle">
+  <div class="celebration">
+    <div class="celebration-icon" aria-hidden="true">🎉</div>
+    <p class="eyebrow">Access activated</p>
+    <h2 id="celebrationTitle">Congratulations!</h2>
+    <p>Your payment has been verified and <strong>My Everyday Planner</strong> is now ready for you.</p>
+    <a class="primary celebration-open" href="../commercial/">Open My Everyday Planner</a>
+    <button type="button" id="closeCelebration" class="secondary">Not now</button>
+  </div>
+</dialog>
+<footer>Built by BizPilot Digital</footer><script type="module" src="./store.js?v=20261030c"></script>
 </body></html>
