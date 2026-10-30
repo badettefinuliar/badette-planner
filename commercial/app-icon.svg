@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">My Everyday Planner</title>
+  <desc id="desc">Rounded planner icon with a check mark and flower accent</desc>
+  <rect width="512" height="512" rx="112" fill="#fff9f0"/>
+  <rect x="104" y="92" width="304" height="328" rx="52" fill="#ffffff" stroke="#a84365" stroke-width="22"/>
+  <path d="M166 90v62M346 90v62" stroke="#a84365" stroke-width="24" stroke-linecap="round"/>
+  <path d="M174 244l48 48 112-118" fill="none" stroke="#a84365" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M334 330c0-27 22-49 49-49 0 27-22 49-49 49Zm0 0c0 27-22 49-49 49 0-27 22-49 49-49Zm0 0c27 0 49 22 49 49-27 0-49-22-49-49Zm0 0c-27 0-49-22-49-49 27 0 49 22 49 49Z" fill="#f4b7c8"/>
+  <circle cx="334" cy="330" r="13" fill="#a84365"/>
+</svg>
