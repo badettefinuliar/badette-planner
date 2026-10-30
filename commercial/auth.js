@@ -3,7 +3,7 @@ import { initializePlanner } from './planner.js';
 import './pwa.js';
 
 const $ = id => document.getElementById(id);
-let auth, signOutUser, watchAccess;
+let auth, signOutUser, watchAccess, loadBuyerIdentity;
 let submitting = false;
 let stopAccess = () => {};
 let generation = 0;
@@ -52,6 +52,32 @@ function resetAccess() {
   stopAccess();
   stopAccess = () => {};
 }
+function ensureBuyerIdentityUI() {
+  let box = $('buyerIdentity');
+  if (box) return box;
+  const planner = $('planner');
+  const eyebrow = planner?.querySelector('.eyebrow');
+  if (!planner || !eyebrow) return null;
+  box = document.createElement('div');
+  box.id = 'buyerIdentity';
+  box.style.margin = '0 0 10px';
+  box.innerHTML = '<strong id="buyerGreeting"></strong><div id="buyerIdentityEmail" class="meta"></div>';
+  eyebrow.insertAdjacentElement('afterend', box);
+  return box;
+}
+async function renderBuyerIdentity(user) {
+  const box = ensureBuyerIdentityUI();
+  if (!box || !user) return;
+  const fallbackName = user.displayName?.trim() || user.email?.split('@')[0] || 'there';
+  $('buyerGreeting').textContent = `Hi, ${fallbackName} 👋`;
+  $('buyerIdentityEmail').textContent = user.email || '';
+  try {
+    const name = await loadBuyerIdentity?.(user);
+    if (name && auth?.currentUser?.uid === user.uid) $('buyerGreeting').textContent = `Hi, ${name} 👋`;
+  } catch {
+    // The greeting can safely keep the account/email fallback if orders are unavailable.
+  }
+}
 async function checkBuyer(user) {
   resetAccess();
   const current = generation;
@@ -89,6 +115,7 @@ async function checkBuyer(user) {
       initializePlanner();
       $('accessGate').hidden = true;
       $('planner').hidden = false;
+      void renderBuyerIdentity(user);
     } catch {
       screen('Planner could not open', 'Please reload the page and try again. Your local data has not been removed.');
     }
@@ -152,6 +179,15 @@ async function boot() {
     watchAccess = (uid, next, error) => storeSDK.onSnapshot(
       storeSDK.doc(store, 'buyers', uid), { includeMetadataChanges: true }, next, error
     );
+    loadBuyerIdentity = async user => {
+      const q = storeSDK.query(storeSDK.collection(store, 'orders'), storeSDK.where('buyerUid', '==', user.uid));
+      const snapshot = await storeSDK.getDocs(q);
+      const records = snapshot.docs
+        .map(doc => doc.data())
+        .filter(order => order.productId === PRODUCT_ID && typeof order.buyerName === 'string' && order.buyerName.trim())
+        .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      return records[0]?.buyerName?.trim() || '';
+    };
     $('loginForm').onsubmit = async event => {
       event.preventDefault();
       if (submitting) return;
