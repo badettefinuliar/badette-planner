@@ -2,7 +2,7 @@ import { firebaseConfig, PRODUCT_ID } from './firebase-config.js';
 import { initializePlanner } from './planner.js';
 
 const $ = id => document.getElementById(id);
-let auth, signOutUser, watchAccess, ensureBuyer;
+let auth, signOutUser, watchAccess;
 let submitting = false;
 let stopAccess = () => {};
 let generation = 0;
@@ -60,13 +60,9 @@ async function checkBuyer(user) {
     return;
   }
   screen('Checking your access…', 'Confirming your buyer approval.');
-  try {
-    await ensureBuyer(user);
-  } catch {
-    if (current === generation) screen('Unable to prepare your account', 'Your login account is ready, but we could not confirm your buyer record. Check your connection and try again.', { retry: true });
-    return;
-  }
-  if (current !== generation) return;
+
+  // Important: the planner never creates buyer records. Buyer records are
+  // created only when a payment is submitted in the store.
   stopAccess = watchAccess(user.uid, snapshot => {
     if (current !== generation) return;
     if (snapshot.metadata.fromCache) {
@@ -74,8 +70,12 @@ async function checkBuyer(user) {
       return;
     }
     const buyer = snapshot.exists() ? snapshot.data() : null;
-    if (buyer?.status !== 'approved' || !Array.isArray(buyer.allowedProducts) || !buyer.allowedProducts.includes(PRODUCT_ID)) {
-      screen('Access Pending Approval', buyer?.status === 'pending' ? 'Your payment or access is still being reviewed. Return to the store to check your order status.' : 'This account does not currently have access to My Everyday Planner. Return to the store using the same email you used for your purchase.', { retry: true });
+    if (!buyer) {
+      screen('No payment submitted yet', 'This account has no payment submission yet. Return to the store to submit your payment for verification.', { retry: true });
+      return;
+    }
+    if (buyer.status !== 'approved' || !Array.isArray(buyer.allowedProducts) || !buyer.allowedProducts.includes(PRODUCT_ID)) {
+      screen('Access Pending Approval', buyer.status === 'pending' ? 'Your payment or access is still being reviewed. Return to the store to check your order status.' : 'This account does not currently have access to My Everyday Planner. Return to the store using the same email you used for your purchase.', { retry: true });
       return;
     }
     try {
@@ -147,14 +147,6 @@ async function boot() {
     await authSDK.setPersistence(auth, authSDK.browserSessionPersistence);
     signOutUser = authSDK.signOut;
     const store = storeSDK.getFirestore(app);
-    ensureBuyer = user => storeSDK.runTransaction(store, async transaction => {
-      const ref = storeSDK.doc(store, 'buyers', user.uid);
-      const existing = await transaction.get(ref);
-      if (!existing.exists()) {
-        if (!user.email) throw new Error('An email account is required');
-        transaction.set(ref, { email: user.email, status: 'pending', allowedProducts: [] });
-      }
-    });
     watchAccess = (uid, next, error) => storeSDK.onSnapshot(
       storeSDK.doc(store, 'buyers', uid), { includeMetadataChanges: true }, next, error
     );
