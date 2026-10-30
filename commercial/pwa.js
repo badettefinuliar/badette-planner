@@ -6,14 +6,57 @@ function addManifestLinks() {
   if (!document.querySelector('link[rel="manifest"]')) {
     const manifest = document.createElement('link');
     manifest.rel = 'manifest';
-    manifest.href = './manifest.webmanifest?v=20261030b';
+    manifest.href = './manifest.webmanifest?v=20261030c';
     document.head.append(manifest);
   }
   if (!document.querySelector('link[rel="apple-touch-icon"]')) {
     const icon = document.createElement('link');
     icon.rel = 'apple-touch-icon';
-    icon.href = './app-icon.svg?v=20261030b';
+    icon.href = './app-icon.svg?v=20261030c';
     document.head.append(icon);
+  }
+}
+
+function addBranding() {
+  if (!document.getElementById('plannerBrandStyle')) {
+    const style = document.createElement('style');
+    style.id = 'plannerBrandStyle';
+    style.textContent = `
+      .planner-brand{display:inline-flex;align-items:center;gap:10px;min-width:0}
+      .planner-brand-icon{width:42px;height:42px;border-radius:12px;display:block;box-shadow:0 4px 12px #7e4c5d22;flex:none}
+      .planner-welcome-icon{width:78px;height:78px;border-radius:22px;display:block;margin:0 0 10px;box-shadow:0 8px 22px #7e4c5d22}
+      @media(max-width:480px){.planner-brand-icon{width:36px;height:36px;border-radius:10px}.planner-brand{gap:8px}.product-header{align-items:flex-start;flex-wrap:wrap}}
+    `;
+    document.head.append(style);
+  }
+
+  const header = document.querySelector('.product-header');
+  const title = header?.querySelector('strong');
+  if (header && title && !document.getElementById('plannerHeaderIcon')) {
+    const wrap = document.createElement('span');
+    wrap.className = 'planner-brand';
+    title.parentNode.insertBefore(wrap, title);
+    const icon = document.createElement('img');
+    icon.id = 'plannerHeaderIcon';
+    icon.className = 'planner-brand-icon';
+    icon.src = './app-icon.svg?v=20261030c';
+    icon.alt = '';
+    icon.width = 42;
+    icon.height = 42;
+    wrap.append(icon, title);
+  }
+
+  const gate = document.getElementById('accessGate');
+  const eyebrow = gate?.querySelector('.eyebrow');
+  if (gate && eyebrow && !document.getElementById('plannerWelcomeIcon')) {
+    const icon = document.createElement('img');
+    icon.id = 'plannerWelcomeIcon';
+    icon.className = 'planner-welcome-icon';
+    icon.src = './app-icon.svg?v=20261030c';
+    icon.alt = 'My Everyday Planner notebook icon';
+    icon.width = 78;
+    icon.height = 78;
+    gate.insertBefore(icon, eyebrow);
   }
 }
 
@@ -85,9 +128,10 @@ function addInstallButton() {
 
 async function setupPWA() {
   addManifestLinks();
+  addBranding();
   const button = addInstallButton();
   if ('serviceWorker' in navigator) {
-    try { await navigator.serviceWorker.register('./service-worker.js?v=20261030b', { scope: './' }); }
+    try { await navigator.serviceWorker.register('./service-worker.js?v=20261030c', { scope: './' }); }
     catch { /* Installation remains optional; planner access still works normally. */ }
   }
   if (!button) return;
