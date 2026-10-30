@@ -63,9 +63,13 @@ Set `BASE_URL` for another server address. These browser suites intercept config
 Security-rules tests are in `admin/tests/rules.cjs` and require the Firestore emulator, Java 21, `firebase-tools`, `@firebase/rules-unit-testing` 4.x, and `firebase` 11.x installed outside the checkout. Run the emulator with the **demo** project `demo-planner-admin`, then run `node --test admin/tests/rules.cjs` with `FIRESTORE_EMULATOR_HOST` set to its local address. Never run these tests against production. From the repository root, with these test dependencies available to Node, run:
 
 ```sh
-firebase emulators:exec --config admin/tests/firebase.json --project demo-planner-admin --only firestore "node --test admin/tests/rules.cjs"
+firebase emulators:exec --config firebase.emulators.json --project demo-planner-admin --only firestore "node --test admin/tests/rules.cjs"
 ```
 
 If the dependencies were installed outside the checkout, set `NODE_PATH` to that installation's `node_modules` directory. The official emulator download requires `storage.googleapis.com`; if blocked by environment policy, enable that destination in environment settings before rerunning. The suite seeds only synthetic access records and asserts anonymous/buyer/admin permissions, exact pending signup creation, UID/email matching, no self-approval, no overwrites, schema restrictions, and admin revocation.
 
 Before release, deploy the rules and smoke-test your configured Firebase project: your UID can list/update records, another signed-in non-admin UID cannot list/update them, and the commercial planner responds to approval/revocation. Runtime Firebase hosts are the same as the commercial app; no new Firebase project is required.
+
+## Orders and manual payments
+
+The **Orders** section connects to the [BizPilot Digital storefront](../store/README.md). Pending payments appear first. Verify actual receipt in GCash/bank before choosing Mark Payment Verified. This alone does not approve the buyer. In Verified Payments, choose Grant Access and confirm the separate activation. Reject Payment preserves the order and never grants access. The shared rules enforce pending → verified/rejected, then verified → access_granted with an approved buyer in the same atomic grant transaction. Direct buyer tools remain independent manual overrides, not payment verification. See the store guide for schema, rollout, tests, and payment configuration.

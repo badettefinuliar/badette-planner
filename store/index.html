@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light"><meta name="theme-color" content="#fff9f0">
+<title>My Everyday Planner · BizPilot Digital</title><link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header><a class="brand" href="./">BizPilot <span>Digital</span></a><nav aria-label="Store navigation"><a href="../commercial/">Open planner</a><button id="logout" class="secondary" hidden>Logout</button></nav></header>
+<main>
+<section class="hero"><p class="eyebrow">Less mental clutter. More everyday clarity.</p><h1>A lighter way to plan<br>your everyday life.</h1><p>Bring bills, errands, and savings goals together in one bright, simple planner.</p></section>
+<section class="product card" aria-labelledby="productName"><div><p class="eyebrow">Your daily fresh start</p><h2 id="productName">My Everyday Planner</h2><p>Scattered reminders and forgotten due dates? Keep what matters in one place, on your own device.</p><ul><li>Monthly bills with paid, remaining, and due-date tracking</li><li>Errands and travel / savings goals</li><li>Your own planner title and pastel colors</li><li>Local device storage, plus Backup / Restore</li></ul></div><div class="offer"><span class="price">₱149</span><p>One-time product access<br><small>Manual payment verification</small></p><button class="primary" id="getAccess">Get Access</button></div></section>
+<section id="checkout" class="card" hidden aria-labelledby="checkoutTitle">
+<h2 id="checkoutTitle">Get your planner access</h2><p id="accountMessage" role="status" aria-live="polite">Connecting to your account…</p>
+<div id="authPanel" hidden>
+<div class="switch"><button id="loginMode" aria-pressed="true">Log in</button><button id="signupMode" aria-pressed="false">Create account</button></div>
+<form id="authForm"><label for="email">Email address</label><input id="email" type="email" autocomplete="username" maxlength="254" required><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required><div id="confirmWrap" hidden><label for="confirmPassword">Confirm password (at least 8 characters)</label><input id="confirmPassword" type="password" autocomplete="new-password"></div><button id="authSubmit" class="primary">Log in</button></form>
+<p id="authNav">New here? Choose Create account. Already have an account? Choose Log in.</p>
+</div>
+<button id="retryAccount" class="secondary" hidden>Retry account setup</button>
+<div id="paymentPanel" hidden>
+<p class="notice">Payment is checked manually by the seller. A reference number alone does not confirm receipt or activate access.</p>
+<form id="orderForm"><div class="fields"><div><label for="buyerName">Full name</label><input id="buyerName" autocomplete="name" minlength="2" maxlength="100" required></div><div><label for="buyerEmail">Account email</label><input id="buyerEmail" type="email" readonly></div></div>
+<label for="paymentMethod">Payment method</label><select id="paymentMethod" required><option value="gcash">GCash</option><option value="bank_transfer">Bank Transfer</option></select>
+<div id="paymentInstructions" class="instructions"></div>
+<label for="paymentReference">Payment reference / transaction number</label><input id="paymentReference" minlength="3" maxlength="120" required autocomplete="off">
+<label for="note">Note (optional)</label><textarea id="note" maxlength="500" rows="3"></textarea><p class="muted">Enter only payment-reference metadata. Never send a password, PIN, OTP, card number, or banking login. Proof upload is not available yet.</p>
+<button id="submitOrder" class="primary">Submit payment for verification · ₱149</button></form>
+</div><p id="orderMessage" role="status" aria-live="polite"></p>
+</section>
+<section id="myOrders" class="card" hidden aria-labelledby="ordersTitle"><h2 id="ordersTitle">Your orders</h2><p id="ordersMessage" role="status" aria-live="polite"></p><div id="orderList"></div><button id="refreshOrders" class="secondary">Refresh orders</button></section>
+<noscript><p class="card">Enable JavaScript to create an account and submit an order.</p></noscript>
+</main><footer>Built by BizPilot Digital</footer><script type="module" src="./store.js"></script>
+</body></html>

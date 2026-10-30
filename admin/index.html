@@ -24,7 +24,10 @@
 <p class="muted">Only accounts authorized by the seller can manage buyer access.</p>
 </section>
 <section id="dashboard" hidden aria-labelledby="dashboardTitle">
-<div class="intro"><p class="eyebrow">A little clarity for your business</p><h1 id="dashboardTitle">Buyer access</h1><p class="muted">Manage access to My Everyday Planner. This workspace contains access details only.</p></div>
+<div class="intro"><p class="eyebrow">A little clarity for your business</p><h1 id="dashboardTitle">Seller workspace</h1><p class="muted">Manage My Everyday Planner buyer access and manual payment verification.</p></div>
+<nav id="workspaceTabs" aria-label="Admin sections"><button data-section="buyers" aria-pressed="true">Buyer access</button><button data-section="orders" aria-pressed="false">Orders</button></nav>
+<div id="buyerPanel">
+<p class="muted">Manual buyer overrides, independent of order/payment verification. Use Orders to verify a payment before granting access for that order.</p>
 <nav id="filters" aria-label="Buyer status filters">
 <button data-status="pending" aria-pressed="true">Pending</button>
 <button data-status="approved" aria-pressed="false">Approved</button>
@@ -35,10 +38,16 @@
 <div id="buyers" class="buyers"></div>
 <button id="refresh" class="secondary">Refresh buyers</button>
 <p class="muted">Buyer accounts and pending records are created in Firebase. Passwords and planner financial data are never shown here.</p>
+</div>
+<div id="ordersPanel" hidden>
+<h2>Orders &amp; manual payments</h2><p class="muted">Verify actual receipt in GCash or your bank first. Marking a payment verified does not activate access; Grant Access is a separate confirmed action.</p>
+<nav id="orderFilters" aria-label="Order status filters"><button data-status="payment_pending" aria-pressed="true">Pending Payments</button><button data-status="payment_verified" aria-pressed="false">Verified Payments</button><button data-status="rejected" aria-pressed="false">Rejected Payments</button><button data-status="access_granted" aria-pressed="false">Access Granted</button></nav>
+<p id="orderListMessage" role="status" aria-live="polite"></p><p id="orderActionMessage" role="status" aria-live="polite"></p><div id="adminOrders" class="buyers"></div><button id="refreshAdminOrders" class="secondary">Refresh orders</button>
+</div>
 </section>
 <noscript><p class="card">Enable JavaScript to log in to the admin dashboard.</p></noscript>
 </main>
-<footer>My Everyday Planner · Seller workspace</footer>
+<footer>Built by BizPilot Digital</footer>
 <script type="module" src="./admin.js"></script>
 </body>
 </html>

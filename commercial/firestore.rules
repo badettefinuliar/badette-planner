@@ -32,6 +32,43 @@ service cloud.firestore {
         && request.resource.data.allowedProducts.size() == 0;
       allow delete: if false;
     }
+    match /orders/{orderId} {
+      function validNewOrder() {
+        let d = request.resource.data;
+        return d.keys().hasAll(['buyerUid', 'buyerEmail', 'buyerName', 'productId', 'amount', 'paymentMethod', 'paymentReference', 'status', 'createdAt'])
+          && d.keys().hasOnly(['buyerUid', 'buyerEmail', 'buyerName', 'productId', 'amount', 'paymentMethod', 'paymentReference', 'note', 'status', 'createdAt'])
+          && d.buyerUid == request.auth.uid && d.buyerEmail == request.auth.token.email
+          && d.buyerName is string && d.buyerName.size() >= 2 && d.buyerName.size() <= 100
+          && d.productId == 'my-everyday-planner' && d.amount == 149
+          && d.paymentMethod in ['gcash', 'bank_transfer']
+          && d.paymentReference is string && d.paymentReference.size() >= 3 && d.paymentReference.size() <= 120
+          && d.get('note', '') is string && d.get('note', '').size() <= 500
+          && d.status == 'payment_pending' && d.createdAt == request.time;
+      }
+      function reviewPayment() {
+        return resource.data.status == 'payment_pending'
+          && request.resource.data.status in ['payment_verified', 'rejected']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewedBy'])
+          && request.resource.data.reviewedAt == request.time
+          && request.resource.data.reviewedBy == request.auth.uid;
+      }
+      function grantVerifiedAccess() {
+        let buyer = getAfter(/databases/$(database)/documents/buyers/$(resource.data.buyerUid));
+        return resource.data.status == 'payment_verified'
+          && resource.data.productId == 'my-everyday-planner'
+          && request.resource.data.status == 'access_granted'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'grantedAt', 'grantedBy'])
+          && request.resource.data.grantedAt == request.time
+          && request.resource.data.grantedBy == request.auth.uid
+          && buyer.data.status == 'approved'
+          && buyer.data.allowedProducts.hasAll(['my-everyday-planner']);
+      }
+      allow create: if signedIn() && validNewOrder();
+      allow get, list: if signedIn() && (resource.data.buyerUid == request.auth.uid || isAdmin());
+      // Review and grant are separate commits. Immutable order/payment details stay intact.
+      allow update: if isAdmin() && (reviewPayment() || grantVerifiedAccess());
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
