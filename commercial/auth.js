@@ -145,7 +145,8 @@ async function boot() {
     ]);
     const app = appSDK.initializeApp(firebaseConfig);
     auth = authSDK.getAuth(app);
-    await authSDK.setPersistence(auth, authSDK.browserSessionPersistence);
+    // Keep the approved buyer signed in on this device until they explicitly log out.
+    await authSDK.setPersistence(auth, authSDK.browserLocalPersistence);
     signOutUser = authSDK.signOut;
     const store = storeSDK.getFirestore(app);
     watchAccess = (uid, next, error) => storeSDK.onSnapshot(
