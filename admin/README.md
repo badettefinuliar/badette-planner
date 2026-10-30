@@ -16,7 +16,7 @@ The dashboard waits for a server-confirmed membership document before requesting
 
 ## Buyer access records and controls
 
-Create Authentication users and buyer records using the existing Firebase console workflow. This dashboard updates existing access records; it does not create user accounts, set passwords, or delete records. Each document ID in `/buyers` must be the buyer's Authentication UID:
+Customers can now create their own Authentication accounts from the commercial login page. Signup (and login recovery) automatically creates a missing pending buyer record. These customers appear in the Pending filter for approval. The console workflow remains available. This dashboard updates existing access records; it does not create user accounts, set passwords, or delete records. Each document ID in `/buyers` must be the buyer's Authentication UID:
 
 ```json
 {
@@ -34,7 +34,7 @@ Records must have these three fields, with a string email, a status of `pending`
 - Approve and Restore set `status: "approved"` and add **`my-everyday-planner`** to `allowedProducts` without removing other product IDs or adding duplicates.
 - Revoke sets `status: "revoked"` and preserves both the document and its existing allowed products. As in the commercial planner, the status denies access for the whole buyer record, including other products sharing that status.
 
-Each change requires confirmation. A server transaction rechecks the admin membership and current buyer record, preserving concurrent product additions. Failed/offline changes report an error and are not queued for later. Buyer creation/deletion and email edits stay in the console. If old records lack required fields or contain unsupported extra fields, correct their metadata in the console before using the dashboard.
+Each change requires confirmation. A server transaction rechecks the admin membership and current buyer record, preserving concurrent product additions. Failed/offline changes report an error and are not queued for later. Self-signup creates pending buyer records; buyer deletion and email edits stay in the console. If old records lack required fields or contain unsupported extra fields, correct their metadata in the console before using the dashboard.
 
 ## Security rules
 
@@ -44,9 +44,9 @@ Each change requires confirmation. A server transaction rechecks the admin membe
 - A listed admin may get/list buyer records and update only `status` and `allowedProducts` on valid access-metadata records.
 - Ordinary buyers cannot self-approve or enumerate other buyers.
 - Users can get only their own `/admins/{uid}` membership document. All client membership writes and membership listing are denied.
-- Buyer create/delete, email changes, passwords/financial fields, and all unrelated database access are denied even to dashboard admins.
+- A signed-in user may create only their own missing pending record, with their authenticated email, an empty product array, and exactly the expected fields. All existing buyer-record updates remain restricted to admins. Creating another user’s record, buyer deletion, email changes, passwords/financial fields, and unrelated database access are denied even to dashboard admins.
 
-Firebase console/IAM and trusted Admin SDK access bypass Firestore rules. Restrict those separately. A modified static page cannot bypass these server rules, although static HTML/JS is publicly downloadable. No live rules deployment is performed by this branch. Until the updated rules are published, the existing commercial planner still works, and the new dashboard cannot verify admin membership or list buyers.
+Firebase console/IAM and trusted Admin SDK access bypass Firestore rules. Restrict those separately. A modified static page cannot bypass these server rules, although static HTML/JS is publicly downloadable. No live rules deployment is performed by this branch. If the previous admin rules are already deployed, existing approved buyers and admin actions continue to work before this signup rules update. New pending-record creation requires publishing the updated rules.
 
 ## Tests
 
@@ -55,10 +55,17 @@ Start a static server from the repository root: `python3 -m http.server 8000`. I
 ```sh
 CHROMIUM_PATH=/usr/bin/chromium node admin/tests/dashboard.cjs
 CHROMIUM_PATH=/usr/bin/chromium node commercial/tests/access.cjs
+CHROMIUM_PATH=/usr/bin/chromium node commercial/tests/signup.cjs
 ```
 
 Set `BASE_URL` for another server address. These browser suites intercept configuration and Firebase modules only in tests, without changing project credentials or contacting real buyers. They cover authorization gating, zero buyer reads for non-admins, filters, approve/revoke/restore, product preservation, confirmation cancellation, failure cleanup, revocation/offline/logout, safe text rendering, mobile/light layout, localStorage isolation, and the existing commercial planner features.
 
-Security-rules tests are in `admin/tests/rules.cjs` and require the Firestore emulator, Java 21, `firebase-tools`, `@firebase/rules-unit-testing` 4.x, and `firebase` 11.x installed outside the checkout. Run the emulator with the **demo** project `demo-planner-admin`, then run `node --test admin/tests/rules.cjs` with `FIRESTORE_EMULATOR_HOST` set to its local address. Never run these tests against production. They seed only synthetic access records and assert anonymous/buyer/admin permissions, schema restrictions, and admin revocation.
+Security-rules tests are in `admin/tests/rules.cjs` and require the Firestore emulator, Java 21, `firebase-tools`, `@firebase/rules-unit-testing` 4.x, and `firebase` 11.x installed outside the checkout. Run the emulator with the **demo** project `demo-planner-admin`, then run `node --test admin/tests/rules.cjs` with `FIRESTORE_EMULATOR_HOST` set to its local address. Never run these tests against production. From the repository root, with these test dependencies available to Node, run:
+
+```sh
+firebase emulators:exec --config admin/tests/firebase.json --project demo-planner-admin --only firestore "node --test admin/tests/rules.cjs"
+```
+
+If the dependencies were installed outside the checkout, set `NODE_PATH` to that installation's `node_modules` directory. The official emulator download requires `storage.googleapis.com`; if blocked by environment policy, enable that destination in environment settings before rerunning. The suite seeds only synthetic access records and asserts anonymous/buyer/admin permissions, exact pending signup creation, UID/email matching, no self-approval, no overwrites, schema restrictions, and admin revocation.
 
 Before release, deploy the rules and smoke-test your configured Firebase project: your UID can list/update records, another signed-in non-admin UID cannot list/update them, and the commercial planner responds to approval/revocation. Runtime Firebase hosts are the same as the commercial app; no new Firebase project is required.

@@ -32,7 +32,7 @@ test('admin can list/read buyers and approve, revoke, restore access',async()=>{
 test('admin cannot add passwords/financial fields, edit email or use invalid access fields',async()=>{
  const db=env.authenticatedContext('owner').firestore(),ref=doc(db,'buyers','buyer');for(const patch of [{password:'secret'},{bills:[]},{savings:100},{email:'changed@example.com'},{status:'invalid'},{allowedProducts:'my-everyday-planner'}])await assertFails(updateDoc(ref,patch));
 });
-test('admin cannot create/delete buyers or edit/list memberships',async()=>{
+test('admin cannot create other buyers/delete buyers or edit/list memberships',async()=>{
  const db=env.authenticatedContext('owner').firestore();await assertFails(setDoc(doc(db,'buyers','new'),{email:'x',status:'pending',allowedProducts:[]}));await assertFails(deleteDoc(doc(db,'buyers','second')));
  await assertFails(setDoc(doc(db,'admins','new'),{}));await assertFails(updateDoc(doc(db,'admins','owner'),{admin:true}));await assertFails(deleteDoc(doc(db,'admins','owner')));await assertFails(getDocs(collection(db,'admins')));
 });
@@ -41,4 +41,28 @@ test('all unrelated database access denied to buyers and admins',async()=>{
 });
 test('revoked administrator can no longer list or update buyer access',async()=>{
  await env.withSecurityRulesDisabled(ctx=>deleteDoc(doc(ctx.firestore(),'admins','owner')));const db=env.authenticatedContext('owner').firestore();await assertFails(getDocs(collection(db,'buyers')));await assertFails(updateDoc(doc(db,'buyers','buyer'),{status:'revoked'}));
+});
+
+test('authenticated signup creates only its own exact pending record',async()=>{
+ const db=env.authenticatedContext('new-customer',{email:'new@example.com'}).firestore();
+ await assertSucceeds(setDoc(doc(db,'buyers','new-customer'),{email:'new@example.com',status:'pending',allowedProducts:[]}));
+ await assertSucceeds(getDoc(doc(db,'buyers','new-customer')));
+ await assertFails(updateDoc(doc(db,'buyers','new-customer'),{status:'approved',allowedProducts:['my-everyday-planner']}));
+ await assertFails(setDoc(doc(db,'buyers','new-customer'),{email:'new@example.com',status:'pending',allowedProducts:[]}));
+});
+test('signup rejects wrong UID/email, approved status, products, extra/missing fields',async()=>{
+ const db=env.authenticatedContext('signup-invalid',{email:'new@example.com'}).firestore();
+ const pending={email:'new@example.com',status:'pending',allowedProducts:[]};
+ await assertFails(setDoc(doc(db,'buyers','other-uid'),pending));
+ for(const patch of [{email:'wrong@example.com'},{status:'approved'},{status:'revoked'},{allowedProducts:['my-everyday-planner']},{allowedProducts:{}},{password:'not-allowed'},{bills:[]}])await assertFails(setDoc(doc(db,'buyers','signup-invalid'),{...pending,...patch}));
+ await assertFails(setDoc(doc(db,'buyers','signup-invalid'),{email:'new@example.com',status:'pending'}));
+ await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(),'buyers','anonymous'),pending));
+});
+test('existing Auth account can create missing record without overwriting approved or revoked access',async()=>{
+ const db=env.authenticatedContext('existing-auth',{email:'existing@example.com'}).firestore(),ref=doc(db,'buyers','existing-auth');
+ await assertSucceeds(setDoc(ref,{email:'existing@example.com',status:'pending',allowedProducts:[]}));
+ await env.withSecurityRulesDisabled(ctx=>updateDoc(doc(ctx.firestore(),'buyers','existing-auth'),{status:'approved',allowedProducts:['my-everyday-planner']}));
+ await assertFails(setDoc(ref,{email:'existing@example.com',status:'pending',allowedProducts:[]}));
+ await env.withSecurityRulesDisabled(ctx=>updateDoc(doc(ctx.firestore(),'buyers','existing-auth'),{status:'revoked'}));
+ await assertFails(updateDoc(ref,{status:'approved'}));
 });
