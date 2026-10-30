@@ -150,7 +150,9 @@ async function boot() {
           const existingEmail = $('email').value.trim();
           mode(false);
           $('email').value = existingEmail;
-          $('accountMessage').textContent = 'Account already exists for this email. Please log in instead.';
+          const message = 'This email already has an account. Please log in instead.';
+          $('accountMessage').textContent = message;
+          alert(message);
           $('password').focus();
         } else {
           $('accountMessage').textContent = 'Could not sign in or create your account. Check your details, password policy, and connection.';
