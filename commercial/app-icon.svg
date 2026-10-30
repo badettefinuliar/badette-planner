@@ -1,10 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">My Everyday Planner</title>
-  <desc id="desc">Rounded planner icon with a check mark and flower accent</desc>
-  <rect width="512" height="512" rx="112" fill="#fff9f0"/>
-  <rect x="104" y="92" width="304" height="328" rx="52" fill="#ffffff" stroke="#a84365" stroke-width="22"/>
-  <path d="M166 90v62M346 90v62" stroke="#a84365" stroke-width="24" stroke-linecap="round"/>
-  <path d="M174 244l48 48 112-118" fill="none" stroke="#a84365" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M334 330c0-27 22-49 49-49 0 27-22 49-49 49Zm0 0c0 27-22 49-49 49 0-27 22-49 49-49Zm0 0c27 0 49 22 49 49-27 0-49-22-49-49Zm0 0c-27 0-49-22-49-49 27 0 49 22 49 49Z" fill="#f4b7c8"/>
-  <circle cx="334" cy="330" r="13" fill="#a84365"/>
+  <desc id="desc">Elegant blush notebook planner with gold spiral rings, heart check mark, and floral accents</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff8f2"/>
+      <stop offset="1" stop-color="#f8d9dd"/>
+    </linearGradient>
+    <linearGradient id="cover" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffdf8"/>
+      <stop offset="1" stop-color="#f8e9dd"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8f642d"/>
+      <stop offset=".45" stop-color="#e3bd73"/>
+      <stop offset="1" stop-color="#9b6a32"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#7e4c5d" flood-opacity=".22"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <circle cx="76" cy="90" r="34" fill="#f3bdc8" opacity=".45"/>
+  <circle cx="438" cy="112" r="28" fill="#f7ccd2" opacity=".7"/>
+  <circle cx="438" cy="418" r="42" fill="#f4c4ce" opacity=".48"/>
+
+  <g filter="url(#shadow)">
+    <rect x="112" y="88" width="286" height="348" rx="42" fill="#d993a7" opacity=".45" transform="rotate(4 255 262)"/>
+    <rect x="100" y="78" width="292" height="352" rx="42" fill="url(#cover)" stroke="#d99aaa" stroke-width="7"/>
+    <rect x="117" y="95" width="258" height="318" rx="31" fill="#fffdf9" stroke="#efd8cf" stroke-width="3" stroke-dasharray="7 7"/>
+    <rect x="339" y="145" width="52" height="154" rx="18" fill="#d887a4" stroke="#b45e80" stroke-width="5"/>
+    <rect x="347" y="205" width="43" height="40" rx="13" fill="#f3b8c8" stroke="#b45e80" stroke-width="4"/>
+  </g>
+
+  <g fill="none" stroke="url(#gold)" stroke-width="13" stroke-linecap="round">
+    <path d="M132 73c-8 0-15 7-15 15v30c0 8 7 15 15 15s15-7 15-15V88c0-8-7-15-15-15Z"/>
+    <path d="M183 73c-8 0-15 7-15 15v30c0 8 7 15 15 15s15-7 15-15V88c0-8-7-15-15-15Z"/>
+    <path d="M234 73c-8 0-15 7-15 15v30c0 8 7 15 15 15s15-7 15-15V88c0-8-7-15-15-15Z"/>
+    <path d="M285 73c-8 0-15 7-15 15v30c0 8 7 15 15 15s15-7 15-15V88c0-8-7-15-15-15Z"/>
+    <path d="M336 73c-8 0-15 7-15 15v30c0 8 7 15 15 15s15-7 15-15V88c0-8-7-15-15-15Z"/>
+  </g>
+
+  <path d="M163 191c24 11 41 29 53 54 19-39 43-62 78-76" fill="none" stroke="#d67f9b" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/>
+  <path d="M159 185c21 9 39 22 56 40 22-34 47-56 80-69" fill="none" stroke="#b75b7d" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <text x="244" y="287" text-anchor="middle" font-size="37" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" fill="#9b6271">My Everyday</text>
+  <text x="244" y="326" text-anchor="middle" font-size="21" font-family="Arial, sans-serif" font-weight="700" letter-spacing="6" fill="#a77843">PLANNER</text>
+  <path d="M175 344h140" stroke="#d9b16a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M239 357c-8-12-27-5-23 9 3 10 14 16 23 23 9-7 20-13 23-23 4-14-15-21-23-9Z" fill="#d7839e"/>
+
+  <g transform="translate(370 359)">
+    <path d="M0 54c-28-18-31-49-7-65 21-14 44-1 46 21 2-22 25-35 46-21 24 16 21 47-7 65-16 10-28 16-39 28C28 70 16 64 0 54Z" fill="#efb2c2"/>
+    <circle cx="39" cy="28" r="13" fill="#c66d8c"/>
+    <path d="M25 73c-22 3-38 14-46 32 20 1 36-6 47-20M52 74c22 3 38 14 46 32-20 1-36-6-47-20" fill="none" stroke="#7d9b72" stroke-width="9" stroke-linecap="round"/>
+  </g>
 </svg>
