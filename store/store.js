@@ -1,6 +1,7 @@
 import { firebaseConfig, PRODUCT_ID } from '../commercial/firebase-config.js';
 import { paymentMethods } from './payment-config.js';
 const $ = id => document.getElementById(id);
+const methodLabel = key => paymentMethods[key]?.label || (key === 'bank_transfer' ? 'Bank Transfer' : key === 'gcash' ? 'GCash' : key);
 const readyMethod = key => {
   const method = paymentMethods[key];
   return method?.enabled === true && !!method.recipient?.trim() && !!method.account?.trim() && (key !== 'bank_transfer' || !!method.bank?.trim());
@@ -9,13 +10,13 @@ let auth, authSDK, sdk, db, signup = false, working = false, accountReady = fals
 let version = 0, stopOrders = () => {}, submitting = false, draftOrder;
 function element(tag, value) { const e = document.createElement(tag); e.textContent = value; return e; }
 function paymentInfo() {
-  for (const option of $('paymentMethod').options) option.textContent = `${paymentMethods[option.value]?.label || option.value}${readyMethod(option.value) ? '' : ' — Not yet configured'}`;
+  for (const option of $('paymentMethod').options) option.textContent = `${methodLabel(option.value)}${readyMethod(option.value) ? '' : ' — Not yet configured'}`;
   const method = paymentMethods[$('paymentMethod').value];
   $('paymentInstructions').replaceChildren();
   if (!readyMethod($('paymentMethod').value)) {
     $('paymentInstructions').textContent = 'Not yet configured. Please wait for the seller to publish verified payment instructions before sending a payment.';
   } else {
-    for (const line of [`${method.label} · send ₱149`, method.bank, `Recipient: ${method.recipient}`, `Account: ${method.account}`, method.instructions]) {
+    for (const line of [`${methodLabel($('paymentMethod').value)} · send ₱149`, method.bank, `Recipient: ${method.recipient}`, `Account: ${method.account}`, method.instructions]) {
       if (line) $('paymentInstructions').append(element('p', line));
     }
   }
@@ -109,15 +110,12 @@ $('orderForm').onsubmit = async event => {
   const current = version;
   submitting = true; paymentInfo();
   $('orderMessage').textContent = 'Submitting payment for manual verification…';
-  // Reuse the same random ID if a connection fails after a successful commit.
   try {
     const order = { buyerUid: user.uid, buyerEmail: user.email, buyerName, productId: PRODUCT_ID, amount: 149, paymentMethod: $('paymentMethod').value, paymentReference, note: $('note').value.trim(), status: 'payment_pending', createdAt: sdk.serverTimestamp() };
     draftOrder ||= { ref: sdk.doc(sdk.collection(db, 'orders')), data: order };
     try {
       await sdk.setDoc(draftOrder.ref, draftOrder.data);
     } catch (writeError) {
-      // An acknowledged-late commit is recovered by reading our existing order;
-      // rules forbid replacing it, so retries cannot overwrite status or metadata.
       const existing = await sdk.getDocFromServer(draftOrder.ref);
       if (!existing.exists() || existing.data().buyerUid !== user.uid || existing.data().paymentReference !== draftOrder.data.paymentReference) throw writeError;
     }
