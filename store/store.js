@@ -74,30 +74,19 @@ function watchOrders(user, current) {
     }
   }, () => { if (current === version) { $('orderList').replaceChildren(); $('ordersMessage').textContent = 'Could not load orders. Check your connection and refresh.'; } });
 }
-async function accountChanged(user) {
+function accountChanged(user) {
   clearSession();
   const current = version;
   $('logout').hidden = !user;
   $('authPanel').hidden = !!user;
   $('retryAccount').hidden = true;
   if (!user) { $('accountMessage').textContent = 'Log in or create an account to submit your payment.'; return; }
-  $('accountMessage').textContent = 'Preparing your account…';
-  try {
-    await sdk.runTransaction(db, async transaction => {
-      const ref = sdk.doc(db, 'buyers', user.uid), buyer = await transaction.get(ref);
-      if (!buyer.exists()) transaction.set(ref, { email: user.email, status: 'pending', allowedProducts: [] });
-    });
-    if (current !== version) return;
-    accountReady = true;
-    $('accountMessage').textContent = `Signed in as ${user.email}. Choose your payment method below.`;
-    $('buyerEmail').value = user.email;
-    $('paymentPanel').hidden = false;
-    paymentInfo(); watchOrders(user, current);
-  } catch {
-    if (current !== version) return;
-    $('accountMessage').textContent = 'Your login account is ready, but buyer setup could not complete. Check your connection and retry with this same account.';
-    $('retryAccount').hidden = false;
-  }
+  accountReady = true;
+  $('accountMessage').textContent = `Signed in as ${user.email}. Choose your payment method below.`;
+  $('buyerEmail').value = user.email;
+  $('paymentPanel').hidden = false;
+  paymentInfo();
+  watchOrders(user, current);
 }
 $('retryAccount').onclick = () => accountChanged(auth?.currentUser);
 $('refreshOrders').onclick = () => { if (auth?.currentUser && accountReady) watchOrders(auth.currentUser, version); };
@@ -113,12 +102,18 @@ $('orderForm').onsubmit = async event => {
   try {
     const order = { buyerUid: user.uid, buyerEmail: user.email, buyerName, productId: PRODUCT_ID, amount: 149, paymentMethod: $('paymentMethod').value, paymentReference, note: $('note').value.trim(), status: 'payment_pending', createdAt: sdk.serverTimestamp() };
     draftOrder ||= { ref: sdk.doc(sdk.collection(db, 'orders')), data: order };
-    try {
-      await sdk.setDoc(draftOrder.ref, draftOrder.data);
-    } catch (writeError) {
-      const existing = await sdk.getDocFromServer(draftOrder.ref);
-      if (!existing.exists() || existing.data().buyerUid !== user.uid || existing.data().paymentReference !== draftOrder.data.paymentReference) throw writeError;
-    }
+    await sdk.runTransaction(db, async transaction => {
+      const buyerRef = sdk.doc(db, 'buyers', user.uid);
+      const buyer = await transaction.get(buyerRef);
+      const existingOrder = await transaction.get(draftOrder.ref);
+      if (existingOrder.exists()) {
+        const existing = existingOrder.data();
+        if (existing.buyerUid !== user.uid || existing.paymentReference !== draftOrder.data.paymentReference) throw new Error('Order conflict');
+        return;
+      }
+      if (!buyer.exists()) transaction.set(buyerRef, { email: user.email, status: 'pending', allowedProducts: [] });
+      transaction.set(draftOrder.ref, draftOrder.data);
+    });
     if (current !== version) return;
     draftOrder = undefined;
     $('orderForm').reset(); $('buyerEmail').value = user.email;
