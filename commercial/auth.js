@@ -56,19 +56,17 @@ async function checkBuyer(user) {
   const current = generation;
   $('logout').hidden = !user;
   if (!user) {
-    screen('Welcome back', 'Log in with your email and password, or create an account to request access.', { login: true });
+    screen('Welcome back', 'Log in with the email and password you used when buying your planner.', { login: true });
     return;
   }
   screen('Checking your access…', 'Confirming your buyer approval.');
-  // Create only a missing pending record. Transactions never replace existing access.
   try {
     await ensureBuyer(user);
   } catch {
-    if (current === generation) screen('Unable to prepare your account', 'Your login account is ready, but we could not confirm your buyer record. Check your connection and try again. If you just signed up, do not create another account: log in and retry.', { retry: true });
+    if (current === generation) screen('Unable to prepare your account', 'Your login account is ready, but we could not confirm your buyer record. Check your connection and try again.', { retry: true });
     return;
   }
   if (current !== generation) return;
-  // Only buyer access metadata is synchronized; planner data stays on this device.
   stopAccess = watchAccess(user.uid, snapshot => {
     if (current !== generation) return;
     if (snapshot.metadata.fromCache) {
@@ -77,13 +75,10 @@ async function checkBuyer(user) {
     }
     const buyer = snapshot.exists() ? snapshot.data() : null;
     if (buyer?.status !== 'approved' || !Array.isArray(buyer.allowedProducts) || !buyer.allowedProducts.includes(PRODUCT_ID)) {
-      screen('Access Pending Approval', buyer?.status === 'pending' ? 'Your account is ready. Access is pending approval.' : 'Your account is signed in, but access to My Everyday Planner is not currently approved. Please contact the seller with your purchase email.', { retry: true });
+      screen('Access Pending Approval', buyer?.status === 'pending' ? 'Your payment or access is still being reviewed. Return to the store to check your order status.' : 'This account does not currently have access to My Everyday Planner. Return to the store using the same email you used for your purchase.', { retry: true });
       return;
     }
     try {
-      // planner.js initializes once per page load, so account switches force a
-      // reload. This prevents the previous buyer's in-memory planner data from
-      // remaining visible after another account signs in on the same browser.
       if (plannerUserUid && plannerUserUid !== user.uid) {
         location.reload();
         return;
@@ -103,17 +98,15 @@ async function checkBuyer(user) {
 }
 
 function clearPasswords() {
-  ['loginPassword', 'signupPassword', 'signupConfirm'].forEach(id => { $(id).value = ''; });
-  $('signupConfirm').setCustomValidity('');
+  ['loginPassword', 'signupPassword', 'signupConfirm'].forEach(id => { if ($(id)) $(id).value = ''; });
+  if ($('signupConfirm')) $('signupConfirm').setCustomValidity('');
 }
 function setSubmitting(value) {
   submitting = value;
-  ['loginSubmit', 'signupSubmit', 'showSignup', 'showLogin'].forEach(id => { $(id).disabled = value; });
+  ['loginSubmit', 'signupSubmit', 'showSignup', 'showLogin'].forEach(id => { if ($(id)) $(id).disabled = value; });
 }
 $('showSignup').onclick = () => {
-  clearPasswords();
-  screen('Create your account', 'Sign up to request access to My Everyday Planner.', { signup: true });
-  $('signupEmail').focus();
+  window.location.href = '../store/?signup=1';
 };
 $('showLogin').onclick = () => {
   clearPasswords();
@@ -130,8 +123,6 @@ $('logout').onclick = async () => {
   $('logout').disabled = true;
   try {
     await signOutUser(auth);
-    // Start the next login with a clean JS memory state. Per-user planner data
-    // remains stored locally under that user's UID-scoped key.
     location.reload();
   } catch {
     screen('Logout could not complete', 'Please try Logout again. The planner remains locked.');
@@ -153,7 +144,6 @@ async function boot() {
     ]);
     const app = appSDK.initializeApp(firebaseConfig);
     auth = authSDK.getAuth(app);
-    // Session-only auth: closing the tab ends login; planner data remains local.
     await authSDK.setPersistence(auth, authSDK.browserSessionPersistence);
     signOutUser = authSDK.signOut;
     const store = storeSDK.getFirestore(app);
@@ -161,7 +151,6 @@ async function boot() {
       const ref = storeSDK.doc(store, 'buyers', user.uid);
       const existing = await transaction.get(ref);
       if (!existing.exists()) {
-        // Auth supplies the canonical email; passwords never enter this document.
         if (!user.email) throw new Error('An email account is required');
         transaction.set(ref, { email: user.email, status: 'pending', allowedProducts: [] });
       }
@@ -188,44 +177,14 @@ async function boot() {
         setSubmitting(false);
       }
     };
-    $('signupForm').onsubmit = async event => {
+    $('signupForm').onsubmit = event => {
       event.preventDefault();
-      if (submitting) return;
-      const password = $('signupPassword').value;
-      if (password.length < 8) {
-        $('accessMessage').textContent = 'Choose a password with at least 8 characters.';
-        return;
-      }
-      if (password !== $('signupConfirm').value) {
-        $('signupConfirm').setCustomValidity('The passwords do not match.');
-        $('signupConfirm').reportValidity();
-        $('accessMessage').textContent = 'The passwords do not match. Please try again.';
-        return;
-      }
-      setSubmitting(true);
-      $('accessMessage').textContent = 'Creating your account…';
-      try {
-        // The auth listener prepares the pending record, including after a reload.
-        await authSDK.createUserWithEmailAndPassword(auth, $('signupEmail').value.trim(), password);
-      } catch (error) {
-        const message = error.code === 'auth/email-already-in-use'
-          ? 'An account already uses this email. Log in to continue. Any existing buyer access will be kept.'
-          : error.code === 'auth/weak-password' || error.code === 'auth/password-does-not-meet-requirements'
-            ? 'Please choose a stronger password that meets the account password policy.'
-            : error.code === 'auth/too-many-requests'
-              ? 'Too many attempts. Please wait before trying again.'
-              : 'Could not create your account. Check your email and connection, then try again.';
-        screen('Create your account', message, { signup: true });
-      } finally {
-        clearPasswords();
-        setSubmitting(false);
-      }
+      window.location.href = '../store/?signup=1';
     };
     authSDK.onAuthStateChanged(auth, checkBuyer, () => {
       resetAccess();
       screen('Login unavailable', 'Please reload and try again.');
     });
-    // Revalidate after tab switching or restoring a cached browser page.
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         resetAccess();
