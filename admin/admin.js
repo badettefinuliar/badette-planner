@@ -97,7 +97,11 @@ function renderBuyer(record) {
   }
   card.append(details);
   const actions = text('div', '', 'actions');
-  const operations = buyer.status === 'revoked' ? [['Restore access', 'approved']] : buyer.status === 'approved' ? [['Revoke', 'revoked']] : [['Approve', 'approved'], ['Revoke', 'revoked']];
+  const operations = buyer.status === 'revoked'
+    ? [['Manual Override: Restore Access', 'approved']]
+    : buyer.status === 'approved'
+      ? [['Revoke', 'revoked']]
+      : [['Manual Override: Grant Access', 'approved'], ['Revoke', 'revoked']];
   for (const [label, status] of operations) {
     const button = text('button', label, status === 'revoked' ? 'revoke' : 'primary');
     button.type = 'button';
@@ -133,7 +137,10 @@ function loadBuyers() {
 }
 async function changeAccess(uid, status, card) {
   if (!verifiedAdmin || !auth.currentUser || busy.has(uid)) return;
-  if (!confirm(`${status === 'revoked' ? 'Revoke' : 'Approve / restore'} My Everyday Planner access for this buyer?`)) return;
+  const confirmation = status === 'revoked'
+    ? 'Revoke My Everyday Planner access for this buyer?'
+    : 'Manual override: grant My Everyday Planner access without using the normal payment verification flow? For regular sales, use Orders → Verify Payment → Grant Access.';
+  if (!confirm(confirmation)) return;
   const current = session, version = listVersion, adminUid = auth.currentUser.uid;
   busy.add(uid);
   card.querySelectorAll('button').forEach(button => { button.disabled = true; });
@@ -155,7 +162,7 @@ async function changeAccess(uid, status, card) {
         transaction.update(ref, { status });
       }
     });
-    if (current === session && version === listVersion) $('actionMessage').textContent = status === 'approved' ? 'Buyer access approved.' : 'Buyer access revoked. The record has been kept.';
+    if (current === session && version === listVersion) $('actionMessage').textContent = status === 'approved' ? 'Manual buyer access override saved.' : 'Buyer access revoked. The record has been kept.';
   } catch {
     if (current === session && version === listVersion) $('actionMessage').textContent = 'Access was not saved. Check your connection and admin permission, then refresh and try again.';
   } finally {
