@@ -1,5 +1,6 @@
 import { firebaseConfig, PRODUCT_ID } from './firebase-config.js';
 import { initializePlanner } from './planner.js';
+import './pwa.js';
 
 const $ = id => document.getElementById(id);
 let auth, signOutUser, watchAccess;
