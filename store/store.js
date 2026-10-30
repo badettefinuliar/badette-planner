@@ -102,18 +102,17 @@ $('orderForm').onsubmit = async event => {
   try {
     const order = { buyerUid: user.uid, buyerEmail: user.email, buyerName, productId: PRODUCT_ID, amount: 149, paymentMethod: $('paymentMethod').value, paymentReference, note: $('note').value.trim(), status: 'payment_pending', createdAt: sdk.serverTimestamp() };
     draftOrder ||= { ref: sdk.doc(sdk.collection(db, 'orders')), data: order };
-    await sdk.runTransaction(db, async transaction => {
-      const buyerRef = sdk.doc(db, 'buyers', user.uid);
-      const buyer = await transaction.get(buyerRef);
-      const existingOrder = await transaction.get(draftOrder.ref);
-      if (existingOrder.exists()) {
-        const existing = existingOrder.data();
-        if (existing.buyerUid !== user.uid || existing.paymentReference !== draftOrder.data.paymentReference) throw new Error('Order conflict');
-        return;
-      }
-      if (!buyer.exists()) transaction.set(buyerRef, { email: user.email, status: 'pending', allowedProducts: [] });
-      transaction.set(draftOrder.ref, draftOrder.data);
-    });
+    try {
+      await sdk.runTransaction(db, async transaction => {
+        const buyerRef = sdk.doc(db, 'buyers', user.uid);
+        const buyer = await transaction.get(buyerRef);
+        if (!buyer.exists()) transaction.set(buyerRef, { email: user.email, status: 'pending', allowedProducts: [] });
+        transaction.set(draftOrder.ref, draftOrder.data);
+      });
+    } catch (writeError) {
+      const existing = await sdk.getDocFromServer(draftOrder.ref);
+      if (!existing.exists() || existing.data().buyerUid !== user.uid || existing.data().paymentReference !== draftOrder.data.paymentReference) throw writeError;
+    }
     if (current !== version) return;
     draftOrder = undefined;
     $('orderForm').reset(); $('buyerEmail').value = user.email;
