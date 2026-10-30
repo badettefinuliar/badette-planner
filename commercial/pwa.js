@@ -6,15 +6,23 @@ function addManifestLinks() {
   if (!document.querySelector('link[rel="manifest"]')) {
     const manifest = document.createElement('link');
     manifest.rel = 'manifest';
-    manifest.href = './manifest.webmanifest?v=20261030c';
+    manifest.href = './manifest.webmanifest?v=20261030d';
     document.head.append(manifest);
   }
   if (!document.querySelector('link[rel="apple-touch-icon"]')) {
     const icon = document.createElement('link');
     icon.rel = 'apple-touch-icon';
-    icon.href = './app-icon.svg?v=20261030c';
+    icon.href = './icon-192.png?v=20261030d';
     document.head.append(icon);
   }
+  let favicon = document.querySelector('link[rel="icon"]');
+  if (!favicon) {
+    favicon = document.createElement('link');
+    favicon.rel = 'icon';
+    document.head.append(favicon);
+  }
+  favicon.type = 'image/png';
+  favicon.href = './icon-192.png?v=20261030d';
 }
 
 function addBranding() {
@@ -39,7 +47,7 @@ function addBranding() {
     const icon = document.createElement('img');
     icon.id = 'plannerHeaderIcon';
     icon.className = 'planner-brand-icon';
-    icon.src = './app-icon.svg?v=20261030c';
+    icon.src = './icon-192.png?v=20261030d';
     icon.alt = '';
     icon.width = 42;
     icon.height = 42;
@@ -52,7 +60,7 @@ function addBranding() {
     const icon = document.createElement('img');
     icon.id = 'plannerWelcomeIcon';
     icon.className = 'planner-welcome-icon';
-    icon.src = './app-icon.svg?v=20261030c';
+    icon.src = './icon-192.png?v=20261030d';
     icon.alt = 'My Everyday Planner notebook icon';
     icon.width = 78;
     icon.height = 78;
@@ -68,13 +76,13 @@ function installHelp() {
   dialog.setAttribute('aria-labelledby', 'installHelpTitle');
   const instructions = isIOS()
     ? 'On iPhone or iPad, open this page in Safari, tap the <strong>Share</strong> button, then choose <strong>Add to Home Screen</strong>.'
-    : 'Open your browser menu (usually <strong>⋮</strong>) and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>. If you do not see it yet, reload this page once and try again.';
+    : 'Keep this page open in Chrome for a short while, then tap <strong>Install App</strong> again. You can also open Chrome’s <strong>⋮</strong> menu and look for <strong>Install app</strong>. If you only see Add to Home screen, reload once so Chrome can refresh the new app manifest.';
   dialog.innerHTML = `
     <div class="install-help-inner">
       <p class="eyebrow">Install My Everyday Planner</p>
-      <h2 id="installHelpTitle">Add it to your Home Screen</h2>
+      <h2 id="installHelpTitle">Install the planner app</h2>
       <p>${instructions}</p>
-      <p class="meta">After installation, My Everyday Planner opens in its own app-style window.</p>
+      <p class="meta">A full install opens My Everyday Planner in its own app-style window and uses the planner notebook icon.</p>
       <button type="button" class="pri" id="closeInstallHelp">Got it</button>
     </div>`;
   const style = document.createElement('style');
@@ -93,7 +101,7 @@ function installHelp() {
   if (dialog.showModal) dialog.showModal();
   else alert(isIOS()
     ? 'To install My Everyday Planner: open this page in Safari, tap Share, then Add to Home Screen.'
-    : 'To install My Everyday Planner: open your browser menu and choose Install app or Add to Home screen.');
+    : 'Keep the planner open in Chrome briefly, reload once, then use Install App or Chrome menu > Install app.');
 }
 
 function addInstallButton() {
@@ -131,16 +139,16 @@ async function setupPWA() {
   addBranding();
   const button = addInstallButton();
   if ('serviceWorker' in navigator) {
-    try { await navigator.serviceWorker.register('./service-worker.js?v=20261030c', { scope: './' }); }
-    catch { /* Installation remains optional; planner access still works normally. */ }
+    try {
+      const registration = await navigator.serviceWorker.register('./service-worker.js?v=20261030d', { scope: './', updateViaCache: 'none' });
+      registration.update().catch(() => {});
+    } catch { /* Installation remains optional; planner access still works normally. */ }
   }
   if (!button) return;
   if (isStandalone()) {
     button.hidden = true;
     return;
   }
-  // Keep the button visible even before the browser emits beforeinstallprompt.
-  // This gives every buyer a clear install path instead of silently hiding it.
   button.hidden = false;
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
