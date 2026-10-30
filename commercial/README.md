@@ -28,7 +28,7 @@ Login uses session persistence. The user must log in again after the browser tab
 
 Create the default Cloud Firestore database in production mode. Review and publish **`commercial/firestore.rules`** in the Firebase console's Firestore Rules editor **before enabling buyer access**. This ruleset is intended for a dedicated project/database; replacing rules in a shared project can affect other apps. Remove any existing broad allow rules: overlapping rules grant access if *any* matching allow succeeds.
 
-Buyers can only get/watch `/buyers/{their-auth-uid}`. Collection listing and all browser writes are denied. Every other document path is denied. An administrator using the Firebase console or a trusted Admin SDK manages approvals; Admin SDK credentials never belong in the website. Firebase console/IAM administrators bypass these browser rules, so restrict administrator permissions too.
+Buyers can only get/watch `/buyers/{their-auth-uid}` and cannot list or write buyer records. The seller dashboard at `/admin/` uses `/admins/{uid}` membership to allow authorized admins to list/read buyers and update only access status and allowed products. Membership writes, buyer create/delete, and unrelated database access are denied. See [admin setup](../admin/README.md) to grant your UID access. Firebase console or a trusted Admin SDK manages membership and initial records; Admin SDK credentials never belong in the website. Firebase console/IAM administrators bypass these browser rules, so restrict administrator permissions too.
 
 ## 4. Approve a buyer
 

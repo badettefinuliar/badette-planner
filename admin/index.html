@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#fff9f0">
+<title>Buyer Administration · My Everyday Planner</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header><div><p class="eyebrow">My Everyday Planner</p><strong>Buyer administration</strong></div><button id="logout" class="secondary" hidden>Logout</button></header>
+<main>
+<section id="gate" class="card gate" aria-labelledby="gateTitle">
+<p class="eyebrow">Seller workspace</p>
+<h1 id="gateTitle">Checking admin access…</h1>
+<p id="gateMessage" role="status" aria-live="polite">Connecting securely. Buyer records stay hidden until admin access is verified.</p>
+<form id="loginForm" hidden>
+<label for="email">Email address</label><input id="email" type="email" autocomplete="username" maxlength="254" required>
+<label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required>
+<button id="loginSubmit" class="primary">Log in</button>
+</form>
+<button id="retry" class="secondary" hidden>Check access again</button>
+<p class="muted">Only accounts authorized by the seller can manage buyer access.</p>
+</section>
+<section id="dashboard" hidden aria-labelledby="dashboardTitle">
+<div class="intro"><p class="eyebrow">A little clarity for your business</p><h1 id="dashboardTitle">Buyer access</h1><p class="muted">Manage access to My Everyday Planner. This workspace contains access details only.</p></div>
+<nav id="filters" aria-label="Buyer status filters">
+<button data-status="pending" aria-pressed="true">Pending</button>
+<button data-status="approved" aria-pressed="false">Approved</button>
+<button data-status="revoked" aria-pressed="false">Revoked</button>
+</nav>
+<p id="listMessage" role="status" aria-live="polite"></p>
+<p id="actionMessage" role="status" aria-live="polite"></p>
+<div id="buyers" class="buyers"></div>
+<button id="refresh" class="secondary">Refresh buyers</button>
+<p class="muted">Buyer accounts and pending records are created in Firebase. Passwords and planner financial data are never shown here.</p>
+</section>
+<noscript><p class="card">Enable JavaScript to log in to the admin dashboard.</p></noscript>
+</main>
+<footer>My Everyday Planner · Seller workspace</footer>
+<script type="module" src="./admin.js"></script>
+</body>
+</html>

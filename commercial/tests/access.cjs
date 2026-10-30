@@ -29,9 +29,11 @@ export const onSnapshot=(ref,options,next,error)=>{
  try {
  const page=await browser.newPage({viewport:{width:390,height:844},colorScheme:'dark'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:`export const firebaseConfig={apiKey:'PASTE_TEST'};export const PRODUCT_ID='my-everyday-planner';`}));
  await page.goto(base+'/commercial/');
  await page.getByRole('heading',{name:'Setup required'}).waitFor();
  assert.equal(await page.locator('#planner').isVisible(),false);
+ await page.unroute('**/firebase-config.js');
  await page.route('**/firebase-config.js',r=>r.fulfill({contentType:'text/javascript',body:`export const firebaseConfig={apiKey:'test',projectId:'test',authDomain:'test',appId:'test'};export const PRODUCT_ID='my-everyday-planner';`}));
  await page.route('https://www.gstatic.com/firebasejs/11.10.0/*',r=>r.fulfill({contentType:'text/javascript',body:r.request().url().endsWith('firebase-app.js')?app:r.request().url().endsWith('firebase-auth.js')?auth:store}));
  await page.reload();await page.locator('#loginForm').waitFor({state:'visible'});
