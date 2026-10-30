@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Buyers may fetch/watch only their own access record by Firebase Auth UID.
+    match /buyers/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    // No financial/planner documents or other client-readable collections.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
