@@ -1,0 +1,20 @@
+{
+  "name": "My Everyday Planner",
+  "short_name": "My Planner",
+  "description": "A simple everyday planner for bills, errands, and savings goals.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff9f0",
+  "theme_color": "#fff9f0",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
