@@ -165,4 +165,12 @@ async function boot() {
     window.addEventListener('online', () => accountChanged(auth.currentUser));
   } catch { $('accountMessage').textContent = 'Could not connect to Firebase. Check your connection and reload.'; }
 }
+
+const launchSignup = new URLSearchParams(location.search).get('signup') === '1';
+if (launchSignup) {
+  $('checkout').hidden = false;
+  mode(true);
+  history.replaceState(null, '', location.pathname);
+}
+
 paymentInfo(); boot();
