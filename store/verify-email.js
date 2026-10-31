@@ -28,6 +28,9 @@ $('paymentPanel')?.before(panel);
 let authSDK, auth, storeSDK, db, currentUser = null;
 let sending = false;
 
+// Safe default: keep checkout locked until Firebase confirms the current user's state.
+document.body.classList.add('email-unverified');
+
 function setMessage(text) {
   const node = $('verificationMessage');
   if (node) node.textContent = text;
@@ -59,6 +62,7 @@ async function applyVerificationState(user) {
   currentUser = user || null;
   if (!user) {
     unlockPayment();
+    panel.hidden = true;
     return;
   }
   await authSDK.reload(user).catch(() => {});
