@@ -29,6 +29,15 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   ['bills','errands','travel'].forEach(t=>$(t).hidden=t!==b.dataset.t);
 });
 
+const goalForm=$('fGoal');
+if(goalForm&&!$('gs')){
+  const wrap=document.createElement('div');
+  wrap.innerHTML='<label for="gs">Already saved (₱) <span class="meta">(optional)</span></label><input id="gs" type="number" min="0" step="1" value="0" placeholder="0">';
+  const dateWrap=$('gdt')?.parentElement;
+  if(dateWrap)dateWrap.insertAdjacentElement('afterend',wrap);
+  else goalForm.insertBefore(wrap,goalForm.lastElementChild);
+}
+
 function dueOf(b){const dim=new Date(vm.getFullYear(),vm.getMonth()+1,0).getDate();return new Date(vm.getFullYear(),vm.getMonth(),Math.min(dayOf(b),dim))}
 const diff=d=>Math.round((d-t0())/864e5);
 
@@ -79,11 +88,12 @@ $('clrDone').onclick=()=>{db.errands=db.errands.filter(e=>!e.done);save();render
 
 $('fGoal').onsubmit=e=>{
   e.preventDefault();
-  const name=$('gn').value.trim(),target=parseFloat($('gt').value),date=$('gdt').value;
+  const name=$('gn').value.trim(),target=parseFloat($('gt').value),date=$('gdt').value,starting=parseFloat($('gs')?.value||'0');
   if(!name)return say('mGoal','Enter a goal name.');
   if(isNaN(target)||target<=0)return say('mGoal','Target amount must be more than 0.');
-  db.goals.push({id:Date.now(),name,target,date,saved:[]});
-  save();e.target.reset();say('mGoal','');render();
+  if(isNaN(starting)||starting<0)return say('mGoal','Already saved must be 0 or more.');
+  db.goals.push({id:Date.now(),name,target,date,saved:starting>0?[{t:Date.now(),amt:starting}]:[]});
+  save();e.target.reset();if($('gs'))$('gs').value='0';say('mGoal','');render();
 };
 function addDep(id){
   const g=db.goals.find(x=>x.id===id),inp=$('dep'+id),v=parseFloat(inp.value);
@@ -161,7 +171,6 @@ function applyBrand(){
 function loadBrandInput(){$('brandName').value=cfg().name||''}
 $('brandName').oninput=e=>{cfg().name=e.target.value;save();applyBrand()};
 $('swatches').onclick=e=>{const b=e.target.closest('.sw');if(!b)return;if(b.dataset.k==='salmon')delete cfg().accent;else cfg().accent=b.dataset.k;save();applyBrand()};
-
 
 $('bkSave').onclick=()=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:'application/json'}));a.download='commercial-planner-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();say('mBk','Backup saved. Check your Downloads folder.')}catch(e){say('mBk','This browser could not save the file.')}};
 $('bkLoad').onclick=()=>$('bkFile').click();
