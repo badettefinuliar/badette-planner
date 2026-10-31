@@ -36,7 +36,26 @@ function installScopedPlannerStorage(uid) {
   };
 }
 
-function screen(title, message, { login = false, signup = false, retry = false } = {}) {
+function ensureStoreLink() {
+  let link = $('goToStore');
+  if (link) return link;
+  link = document.createElement('a');
+  link.id = 'goToStore';
+  link.href = '../store/';
+  link.className = 'pri';
+  link.textContent = 'Go to Store';
+  link.style.display = 'inline-block';
+  link.style.textDecoration = 'none';
+  link.style.marginTop = '10px';
+  $('retryAccess')?.insertAdjacentElement('afterend', link);
+  return link;
+}
+function showStoreLink(show) {
+  const link = ensureStoreLink();
+  if (link) link.hidden = !show;
+}
+
+function screen(title, message, { login = false, signup = false, retry = false, store = false } = {}) {
   $('planner').hidden = true;
   $('accessGate').hidden = false;
   $('accessTitle').textContent = title;
@@ -46,6 +65,7 @@ function screen(title, message, { login = false, signup = false, retry = false }
   $('signupForm').hidden = !signup;
   $('loginNav').hidden = !signup;
   $('retryAccess').hidden = !retry;
+  showStoreLink(store);
 }
 function resetAccess() {
   generation++;
@@ -98,11 +118,11 @@ async function checkBuyer(user) {
     }
     const buyer = snapshot.exists() ? snapshot.data() : null;
     if (!buyer) {
-      screen('No payment submitted yet', 'This account has no payment submission yet. Return to the store to submit your payment for verification.', { retry: true });
+      screen('No payment submitted yet', 'This account has no payment submission yet. Go to the Store to verify your email and submit payment for verification.', { store: true });
       return;
     }
     if (buyer.status !== 'approved' || !Array.isArray(buyer.allowedProducts) || !buyer.allowedProducts.includes(PRODUCT_ID)) {
-      screen('Access Pending Approval', buyer.status === 'pending' ? 'Your payment or access is still being reviewed. Return to the store to check your order status.' : 'This account does not currently have access to My Everyday Planner. Return to the store using the same email you used for your purchase.', { retry: true });
+      screen('Access Pending Approval', buyer.status === 'pending' ? 'Your payment or access is still being reviewed. Return to the store to check your order status.' : 'This account does not currently have access to My Everyday Planner. Return to the store using the same email you used for your purchase.', { store: true });
       return;
     }
     try {
@@ -115,6 +135,7 @@ async function checkBuyer(user) {
       initializePlanner();
       $('accessGate').hidden = true;
       $('planner').hidden = false;
+      showStoreLink(false);
       void renderBuyerIdentity(user);
     } catch {
       screen('Planner could not open', 'Please reload the page and try again. Your local data has not been removed.');
