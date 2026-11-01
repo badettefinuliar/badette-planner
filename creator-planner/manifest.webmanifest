@@ -1,0 +1,17 @@
+{
+  "name": "Creator Content Planner",
+  "short_name": "Content Planner",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff8f2",
+  "theme_color": "#a84365",
+  "icons": [
+    {
+      "src": "./creator-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
